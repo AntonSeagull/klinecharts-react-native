@@ -1,34 +1,35 @@
 import {
-  forwardRef,
-  useCallback,
-  useEffect,
-  useImperativeHandle,
-  useRef,
-  useState,
+    forwardRef,
+    useCallback,
+    useEffect,
+    useImperativeHandle,
+    useRef,
+    useState,
 } from 'react';
 
 import {
-  type GestureResponderEvent,
-  Text,
-  View,
-  type ViewStyle,
+    Animated,
+    type GestureResponderEvent,
+    Text,
+    View,
+    type ViewStyle,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import type { WebViewErrorEvent } from 'react-native-webview/lib/WebViewTypes';
 
 import type Coordinate from './types';
 import type {
-  DeepPartial,
-  FontBase64Type,
-  IndicatorCreate,
-  IndicatorFilter,
-  KLineChartRef,
-  KLineData,
-  LoadDataMore,
-  Options,
-  PaneOptions,
-  Precision,
-  Styles,
+    DeepPartial,
+    FontBase64Type,
+    IndicatorCreate,
+    IndicatorFilter,
+    KLineChartRef,
+    KLineData,
+    LoadDataMore,
+    Options,
+    PaneOptions,
+    Precision,
+    Styles,
 } from './types';
 import { getWebContent } from './webContent';
 
@@ -39,6 +40,8 @@ export interface ConvertFilter {
 
 type KLineChartProps = {
     debug?: boolean,
+    fadeInOnInit?: boolean;
+    fadeInDuration?: number;
     dataList?: KLineData[],
     options: Options
     onInited?: () => void,
@@ -97,7 +100,7 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>((props, ref
     }, []);
 
 
-    const inited = useRef<boolean>(false);
+    const fadeAnim = useRef(new Animated.Value(0)).current;
 
     const stylesRef = useRef<string | null>(null)
 
@@ -105,14 +108,26 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>((props, ref
 
     const indicatorsRef = useRef<string | null>(null);
 
+    const [inited, setInited] = useState<boolean>(false);
 
     const precisionRef = useRef<string | null>(null);
+
+    useEffect(() => {
+        if (inited && (props.fadeInOnInit ?? true)) {
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: props.fadeInDuration ?? 500,
+                useNativeDriver: true,
+            }).start();
+        }
+    }, [inited]);
+
     const updateProps = () => {
 
 
         if (webViewRef.current) {
 
-            if (inited.current) {
+            if (inited) {
 
                 let newStyles = JSON.stringify(props.options.styles)
                 if (props.options.styles && stylesRef.current !== newStyles) {
@@ -155,7 +170,7 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>((props, ref
 
     useEffect(() => {
         updateProps();
-    }, [props.options, props.dataList, props.precision, props.indicators]);
+    }, [props.options, props.dataList, props.precision, props.indicators, inited]);
 
     const onLoadEnd = () => {
         setDebugMessage('WebView loaded');
@@ -166,8 +181,8 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>((props, ref
 
         if (data == 'inited') {
             props.onInited?.();
-            inited.current = true;
-            updateProps();
+            setInited(true);
+
             setDebugMessage('call onInited');
             return;
         }
@@ -459,6 +474,8 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>((props, ref
     }, [debugMessage]);
 
     return (<View style={props.style}>
+
+
         {props.debug && !!debugMessage && <Text
             style={{
                 position: 'absolute',
@@ -469,33 +486,35 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>((props, ref
                 backgroundColor: 'rgba(255, 255, 255, 0.8)',
             }}
         >{debugMessageCount} {debugMessage}</Text>}
-        <WebView
-            ref={webViewRef}
-            style={{
-                flex: 1,
-                backgroundColor: 'transparent'
-            }}
-            originWhitelist={['*']}
-            source={{
-                html: html
-            }}
-            onLoadEnd={onLoadEnd}
-            onMessage={event => {
-                const { data } = event.nativeEvent;
-                onReceiveMessageFromWebView(data);
-            }}
 
-            onError={props.onWebViewError}
+        <Animated.View style={{ flex: 1, opacity: inited && (props.fadeInOnInit ?? true) ? fadeAnim : 1 }}>
+            <WebView
+                ref={webViewRef}
+                style={{
+                    flex: 1,
+                    backgroundColor: 'transparent'
+                }}
+                originWhitelist={['*']}
+                source={{
+                    html: html
+                }}
+                onLoadEnd={onLoadEnd}
+                onMessage={event => {
+                    const { data } = event.nativeEvent;
+                    onReceiveMessageFromWebView(data);
+                }}
 
-            onTouchStart={props.onTouchStart}
-            onTouchEnd={props.onTouchEnd}
-            javaScriptEnabled
-            domStorageEnabled
-            scrollEnabled={false}
-            useWebKit={true}
-            injectJavaScript={true}
-            startInLoadingState={true}
-        />
+                onError={props.onWebViewError}
+
+                onTouchStart={props.onTouchStart}
+                onTouchEnd={props.onTouchEnd}
+                javaScriptEnabled
+                domStorageEnabled
+                scrollEnabled={false}
+                useWebKit={true}
+                injectJavaScript={true}
+            />
+        </Animated.View>
     </View>
     );
 });
