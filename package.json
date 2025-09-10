@@ -1,6 +1,6 @@
 {
   "name": "klinecharts-react-native",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "React Native wrapper for KLineChart using WebView. Based on the original library available at https://github.com/klinecharts/KLineChart",
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",
