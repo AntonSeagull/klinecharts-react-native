@@ -219,6 +219,13 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>((props, ref
             },
             web: `
              if(functionName === 'init') {
+
+                //Remove all child nodes in container
+                var container = document.getElementById('container_id');
+                while (container.firstChild) {
+                    container.removeChild(container.firstChild);
+                }
+
                  kchart = window.klinecharts.init(document.getElementById('container_id'), params.options);
                
                  window.ReactNativeWebView.postMessage('inited');
